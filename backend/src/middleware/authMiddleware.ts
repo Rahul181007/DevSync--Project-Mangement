@@ -1,0 +1,1 @@
+// Reads the JWT token → adds req.user.

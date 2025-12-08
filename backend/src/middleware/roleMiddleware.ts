@@ -1,0 +1,1 @@
+// Checks if the user has permission (SUPER_ADMIN, COMPANY_ADMIN, etc).

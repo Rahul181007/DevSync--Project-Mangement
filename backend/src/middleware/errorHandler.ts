@@ -1,0 +1,1 @@
+// Handles API errors in one place.

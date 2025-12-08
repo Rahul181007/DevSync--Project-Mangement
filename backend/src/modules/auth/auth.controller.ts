@@ -67,56 +67,94 @@ export const authController={
           })
     }
 },
-async me(req:Request,res:Response){
-    try {
-        const token=req.cookies?.access_token;
+// async me(req:Request,res:Response){
+//     try {
+//         const token=req.cookies?.access_token;
 
-        if(!token){
-            return res.status(401).json({
-                status:'fail',
-                message:'Not authenticated'
-            })
-        }
+//         if(!token){
+//             return res.status(401).json({
+//                 status:'fail',
+//                 message:'Not authenticated'
+//             })
+//         }
 
-        // decode token
+//         // decode token
         
-        const decoded=jwt.verify(token,env.JWT_SECRET)as AuthPayload;
+//         const decoded=jwt.verify(token,env.JWT_SECRET)as AuthPayload;
 
-        let userDoc;
-        if(decoded.role==='SUPER_ADMIN'){
-            userDoc=await authRepository.findSuperAdminById(decoded.userId)
-        }else{
-            userDoc=await authRepository.findUserById(decoded.userId)
-        }
+//         let userDoc;
+//         if(decoded.role==='SUPER_ADMIN'){
+//             userDoc=await authRepository.findSuperAdminById(decoded.userId)
+//         }else{
+//             userDoc=await authRepository.findUserById(decoded.userId)
+//         }
 
-        if(!userDoc){
-            return res.status(401).json({
-                status:'fail',
-                message:'User not found'
-            })
-        }
+//         if(!userDoc){
+//             return res.status(401).json({
+//                 status:'fail',
+//                 message:'User not found'
+//             })
+//         }
 
-        return res.json({
-            status:'success',
-            data:{
-                user:{
-                    id:userDoc._id.toString(),
-                    name:userDoc.name,
-                    email:userDoc.email,
-                    role:userDoc.role,
-                    companyId:
-                    decoded.role==='SUPER_ADMIN'
-                    ?undefined:(userDoc as any).companyId?.toString(),
-                }
-            }
-        })
-    } catch (error) {
-        console.error('Auth me error',error)
-        return res.status(401).json({
-            status:'fail',
-            message:'Invalid or expired token'
-        })
+//         return res.json({
+//             status:'success',
+//             data:{
+//                 user:{
+//                     id:userDoc._id.toString(),
+//                     name:userDoc.name,
+//                     email:userDoc.email,
+//                     role:userDoc.role,
+//                     companyId:
+//                     decoded.role==='SUPER_ADMIN'
+//                     ?undefined:(userDoc as any).companyId?.toString(),
+//                 }
+//             }
+//         })
+//     } catch (error) {
+//         console.error('Auth me error',error)
+//         return res.status(401).json({
+//             status:'fail',
+//             message:'Invalid or expired token'
+//         })
+//     }
+// }
+async me(req:Request,res:Response){
+  try {
+    const decoded=(req as any).user;
+
+    let userDoc;
+    if(decoded.role==='SUPER_ADMIN'){
+        userDoc=await authRepository.findSuperAdminById(decoded.userId);   
+    }else{
+        userDoc=await authRepository.findUserById(decoded.userId)
     }
+
+    if(!userDoc){
+         return res.status(401).json({ status: "fail", message: "User not found" });
+    }
+     
+    return res.json({
+        status:'success',
+        data:{
+            user:{
+                id:userDoc._id.toString(),
+                name:userDoc.name,
+                email:userDoc.email,
+                role:decoded.role,
+                companyId:
+                decoded.role==='SUPER_ADMIN'?
+                undefined:(userDoc as any).companyId?.toString()
+            }
+        }
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
+  
+  }
 },
 
 async logout(req:Request,res:Response){
@@ -144,5 +182,51 @@ async logout(req:Request,res:Response){
             message:'Failed to logout'
         })
     }
+},
+
+async refresh(req:Request,res:Response){
+  try {
+    const token =req.cookies?.refresh_token
+    
+    if(!token){
+        return res.status(401).json({
+            status:'fail',
+            message:'Refresh token missing'
+        })
+    }
+
+    const decoded=jwt.verify(token,env.JWT_SECRET)as AuthPayload
+
+    // create new access token
+    const newAccessToken=jwt.sign(
+        {
+            userId:decoded.userId,
+            role:decoded.role,
+            companyId:decoded.companyId
+        },
+        env.JWT_SECRET,
+        {expiresIn:env.JWT_ACCESS_EXPIRES_IN}
+    );
+
+    res.cookie('access_token',newAccessToken,{
+        httpOnly:true,
+        sameSite:'lax',
+        secure:false,
+        maxAge:15*60*1000
+    })
+
+    return res.json({
+        status:'success',
+        message:'Access token refreshed'
+    })
+
+  } catch (error) {
+        console.error("Refresh token error", error);
+    return res.status(401).json({
+      status: "fail",
+      message: "Invalid or expired refresh token",
+    });
+  
+  }
 }
 }

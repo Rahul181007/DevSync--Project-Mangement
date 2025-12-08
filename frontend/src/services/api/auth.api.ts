@@ -11,6 +11,8 @@ export const authApi={
 
     logout(){
         return http.post('/auth/logout')
-    }
-
+    },
+    refresh() {
+    return http.post("/auth/refresh");
+}
 }

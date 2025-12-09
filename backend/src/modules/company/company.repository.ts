@@ -1,7 +1,24 @@
 import { Company } from "models/Company.model";
 import { ListCompaniesQuery } from "./company.validators";
+import { Types } from "mongoose";
 
 export const companyRepository={
+ 
+    //create a  new company
+    async createCompany(data:any){
+        return Company.create(data)
+    },
+
+    //find a company by id
+    async findById(id:string){
+        return Company.findById(id)
+    },
+
+    // find company by domain 
+    async findByDomain(domain:string){
+        return Company.findOne({domain})
+    },
+ // lsit companie (search + filter +pagination)
     async listCompanies(params:ListCompaniesQuery){
         const {search,status,page,limit}=params;
 
@@ -25,8 +42,25 @@ export const companyRepository={
             Company.countDocuments(filter).exec()
         ])
 
-        return {item,total,page,limit}
+        return {item:item,total,page,limit,totalPages:Math.ceil(total/limit)}
+    },
 
+    //update Company status 
 
+    async updateStatus(id:string,status:string,approvedBy?:string){
+        const update:any={status};
+
+        if(status==='APPROVED' && approvedBy){
+            update.approvedBy=new Types.ObjectId(approvedBy)
+        }
+        return Company.findByIdAndUpdate(id,update,{new:true})
+    },
+
+    async setOwnerAdmin(companyId:string,userId:string){
+        return Company.findByIdAndUpdate(
+            companyId,
+            {ownerAdminId:userId},
+            {new:true}
+        )
     }
 }

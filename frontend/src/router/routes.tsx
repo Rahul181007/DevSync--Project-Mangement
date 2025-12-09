@@ -16,6 +16,7 @@ export const routes=[
     children:[
         {path:'dashboard',element:<SADashboard />},
         {path:'companies',element:<CompaniesPage />},
+        // { path: "companies/:id", element: <CompanyDetailPage /> },
         {path:'plans',element:<PlanPage />},
         {path:'transactions',element:<TransactionsPage/>},
         {path:'settings',element:<SettingPage/>}

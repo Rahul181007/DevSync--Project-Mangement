@@ -47,7 +47,8 @@ const companySchema=new Schema<ICompany>(
         ownerAdminId:{
             type:Schema.Types.ObjectId,
             ref:'User',
-            required:true
+            required:false,
+            default:null,
         },
         logoUrl:{
             type:String

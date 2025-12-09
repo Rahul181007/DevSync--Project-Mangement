@@ -3,6 +3,7 @@
 import { SuperAdmin } from "models/SuperAdmin.model";
 import { User } from "models/User.model";
 import { Company } from "models/Company.model";
+import bcrypt from 'bcryptjs'
 
 export const authRepository={
     // super admin lookup
@@ -43,7 +44,25 @@ export const authRepository={
 
     findUserById(id:string){
         return User.findById(id).exec()
+    },
+    
+    // creater company admin user when company is approved  company created by adsuperadmin
+    async createCompanyAdmin(data:{
+        companyId:string,
+        name:string,
+        email:string,
+        role:'COMPANY_ADMIN'
+    }){
+        const passwordHash=await bcrypt.hash('admin123',10);
+
+        return User.create({
+            name:data.name,
+            email:data.email,
+            role:data.role,
+            companyId:data.companyId,
+            passwordHash,
+            status:'ACTIVE'
+        })
     }
-    
-    
+
 }

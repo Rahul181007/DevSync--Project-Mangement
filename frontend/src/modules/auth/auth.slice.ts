@@ -14,12 +14,14 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
+  status: "loading" | "authenticated" | "unauthenticated";
   loading: boolean;
   error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
+  status:'loading',
   loading: false,
   error: null,
 };
@@ -76,56 +78,68 @@ const authSlice = createSlice({
     logout(state) {
       state.user = null;
       state.error = null;
-    }
-  },
-  extraReducers: (builder) => {
-    builder
-      // pending
-      .addCase(loginThunk.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-
-      // success
-      .addCase(
-        loginThunk.fulfilled,
-        (state, action: PayloadAction<AuthUser>) => {
-          state.loading = false;
-          state.user = action.payload; // store user
-        }
-      )
-
-      // error
-      .addCase(loginThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || "login failed";
-      })
-
-      // check auth (Auto login)
-      .addCase(checkAuthThunk.pending,(state)=>{
-        state.loading=true
-      })
-      .addCase(checkAuthThunk.fulfilled,
-        (state,action:PayloadAction<AuthUser|null>)=>{
-            state.loading=false;
-            if(action.payload){
-                state.user=action.payload
-            }else{
-                state.user=null
-            }
-        }
-      )
-      .addCase(checkAuthThunk.rejected,(state)=>{
-        state.loading=false;
-        state.user=null;
-      })
-
-      .addCase(logoutThunk.fulfilled,(state)=>{
-        state.user=null
-      })
+    },
+    authFailed(state) {
+    state.user = null;
+    state.loading = false;
   }
+
+  },
+ extraReducers: (builder) => {
+  builder
+    // LOGIN
+    .addCase(loginThunk.pending, (state) => {
+      state.loading = true;
+      state.status = "loading";
+      state.error = null;
+    })
+    .addCase(
+      loginThunk.fulfilled,
+      (state, action: PayloadAction<AuthUser>) => {
+        state.loading = false;
+        state.status = "authenticated";
+        state.user = action.payload;
+      }
+    )
+    .addCase(loginThunk.rejected, (state, action) => {
+      state.loading = false;
+      state.status = "unauthenticated";
+      state.error = action.payload || "login failed";
+    })
+
+    // CHECK AUTH (auto login on refresh)
+    .addCase(checkAuthThunk.pending, (state) => {
+      state.loading = true;          // if you want, or keep false
+      state.status = "loading";
+    })
+    .addCase(
+      checkAuthThunk.fulfilled,
+      (state, action: PayloadAction<AuthUser | null>) => {
+        state.loading = false;
+        if (action.payload) {
+          state.status = "authenticated";
+          state.user = action.payload;
+        } else {
+          state.status = "unauthenticated";
+          state.user = null;
+        }
+      }
+    )
+    .addCase(checkAuthThunk.rejected, (state) => {
+      state.loading = false;
+      state.status = "unauthenticated";
+      state.user = null;
+    })
+
+    // LOGOUT
+    .addCase(logoutThunk.fulfilled, (state) => {
+      state.user = null;
+      state.status = "unauthenticated";
+    });
+}
+
 });
 
-export const { logout } = authSlice.actions;
+export const { logout,authFailed } = authSlice.actions;
 export default authSlice.reducer;
 
